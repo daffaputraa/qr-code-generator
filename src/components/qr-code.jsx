@@ -4,13 +4,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Download, Plus, DownloadCloud, Upload, FileSpreadsheet } from 'lucide-react';
+import { Trash2, Download, Plus, DownloadCloud, Upload, FileSpreadsheet, Loader2 } from 'lucide-react';
 
 const QRGenerator = () => {
     const [vaData, setVaData] = useState([{ name: '', vaNumber: '' }]);
     const [qrCodes, setQrCodes] = useState([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef(null);
 
     // Add beforeunload event listener for refresh warning
@@ -62,8 +63,8 @@ const QRGenerator = () => {
         });
     };
 
-    // Generate QR Code using external QR code library
-    const generateQRCode = (text, size = 200, padding = 20) => {
+    // Generate QR Code using external QR code library - Updated to 1200x1200 with thinner padding
+    const generateQRCode = (text, size = 1200, padding = 60) => {
         return new Promise((resolve, reject) => {
             // Create a container div for the QR code
             const qrContainer = document.createElement('div');
@@ -132,10 +133,12 @@ const QRGenerator = () => {
         });
     };
 
-    // Handle Excel file import
+    // Handle Excel file import - Added loading state
     const handleFileImport = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
+
+        setIsImporting(true);
 
         try {
             const XLSX = await loadSheetJS();
@@ -175,6 +178,8 @@ const QRGenerator = () => {
         } catch (error) {
             console.error('Error importing Excel:', error);
             alert('Gagal membaca file Excel. Pastikan file dalam format .xlsx atau .xls yang valid.');
+        } finally {
+            setIsImporting(false);
         }
 
         // Clear file input
@@ -211,7 +216,7 @@ const QRGenerator = () => {
             for (const item of validData) {
                 const qrData = item.vaNumber; // Only VA number in QR code
                 try {
-                    const qrImage = await generateQRCode(qrData, 240, 30); // Size 240px with 30px padding
+                    const qrImage = await generateQRCode(qrData, 1200, 60); // 1200x1200 with 60px padding
                     codes.push({
                         name: item.name,
                         vaNumber: item.vaNumber,
@@ -342,9 +347,19 @@ const QRGenerator = () => {
                                         size="sm"
                                         variant="outline"
                                         className="text-green-700 border-green-700 hover:bg-green-50"
+                                        disabled={isImporting}
                                     >
-                                        <FileSpreadsheet className="w-4 h-4 mr-1" />
-                                        Import Excel
+                                        {isImporting ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                                Importing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FileSpreadsheet className="w-4 h-4 mr-1" />
+                                                Import Excel
+                                            </>
+                                        )}
                                     </Button>
                                     <Button onClick={addVAInput} size="sm" className="bg-blue-700 hover:bg-blue-600">
                                         <Plus className="w-4 h-4 mr-1" />
@@ -354,8 +369,6 @@ const QRGenerator = () => {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {/* Excel Import Instructions */}
-            
                             {/* Hidden file input */}
                             <input
                                 type="file"
@@ -363,6 +376,7 @@ const QRGenerator = () => {
                                 onChange={handleFileImport}
                                 accept=".xlsx,.xls"
                                 className="hidden"
+                                disabled={isImporting}
                             />
 
                             {vaData.map((item, index) => (
