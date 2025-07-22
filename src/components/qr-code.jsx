@@ -147,15 +147,24 @@ const QRGenerator = () => {
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
-            // Skip header row and process data
+            // Process all rows (including first row) and filter out header-like rows
             const processedData = [];
-            for (let i = 1; i < jsonData.length; i++) {
+            for (let i = 0; i < jsonData.length; i++) {
                 const row = jsonData[i];
-                if (row[0] && row[1]) { // Check if both name and VA number exist
-                    processedData.push({
-                        name: String(row[0]).trim(),
-                        vaNumber: String(row[1]).trim()
-                    });
+                if (row[0] && row[1]) { // Check if both columns exist
+                    const name = String(row[0]).trim();
+                    const vaNumber = String(row[1]).trim();
+                    
+                    // Skip if it looks like a header row (contains common header words)
+                    const isHeaderLike = /^(nama|name|pemilik|owner|virtual|account|va|nomor|number)$/i.test(name) ||
+                                        /^(nama|name|pemilik|owner|virtual|account|va|nomor|number)$/i.test(vaNumber);
+                    
+                    if (!isHeaderLike && name && vaNumber) {
+                        processedData.push({
+                            name: name,
+                            vaNumber: vaNumber
+                        });
+                    }
                 }
             }
 
